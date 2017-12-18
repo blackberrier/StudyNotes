@@ -1,0 +1,127 @@
+1.
+Hadoop YARN架构
+YARN上应用程序编写流程
+Distributed Shell源码分析
+Client
+ApplicationMaster
+HBP中对YARN的封装
+
+参考资料
+	- 《Hadoop YARN权威指南》	-  https://ieevee.com/tech/2015/05/05/yarn-dist-shell.html	- 《Hadoop技术内幕：深入解析YARN架构设计与实现原理》
+版本
+	Hadoop YARN 2.6.5
+	HBP：Hadoop YARN 2.6.0
+
+2.
+ResourceManager
+全局的进程
+Scheduler + ApplicationsManager
+NodeManager
+与每个节点的资源和任务管理器
+Container：一组CPU和内存资源
+ApplicationMaster
+与每个app相关的进程
+Container0
+
+3.
+
+4.
+YARN编程的“HelloWorld”
+主要功能：在一个Hadoop集群的多个节点上运行shell命令或脚本
+
+Distributed-Shell源码主要有三个类组成
+Client、ApplicationMaster和DSConstants
+
+5.
+实例化一个YarnClient对象，并用YarnConfiguration对其初始化
+启动YarnClient
+获取YARN集群参数、获取YARN节点报告、获取队列信息等
+创建客户端应用程序
+向ResourceManager提交应用程序
+获取应用程序的状态报告
+
+6.
+public static void main(String[] args){    //1.实例化client对象，并初始化    Client client = new Client();    //2.初始化     boolean doRun = client.init(args);    //3. 运行（开启服务）    result = client.run();}
+
+7.
+Client(String appMasterMainClass, Configuration conf) {    //1.读取配置文件，指定ApplicationMaster
+    this.conf = conf;[new YarnConfiguration()]    this.appMasterMainClass = appMasterMainClass;
+      [org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster]
+    //2.通过编程库创建yarnClient    yarnClient = YarnClient.createYarnClient();    yarnClient.init(conf);    //3.创建opts，后面解析参数的时候用    opts.addOption(“jar”, true, “Jar file containing the application master”);    opts.addOption(“shell_command”, true, Shell command to be executed by the Application Master..."); 
+    ...}
+
+8.
+init()方法使用GnuParser解析参数
+传入的参数
+有些参数是app通用的：name，申请的内存、cpu大小
+有些参数是当前app特有的，比如shell_command
+参数检查
+
+9.
+run()
+调用YarnClient的start()方法开启服务，建立与ResourceManager的RPC连接
+调用createApplication()方法创建一个YarnClientApplication类的对象app，封装了
+ApplicationSubmissionContext：rm启动am的上下文
+GetNewApplicationResponse：rm发给client的响应（包括唯一的id，集群可用资源）
+
+10.
+3. 构建appContext，用于提交作业。am本身是一个YARN Container，启动am需要一些信息， 客户端信息打包到ApplicationSubmissionContext这个数据结构中，主要包括：ID，名称、队列、优先级和ContainerLaunchContext（启动ApplicationMaster所在Container所需的上下，Application所属用户、启动ApplicationMaster所需的资源、本地资源、am的启动命令、环境变量 ）    1. 设置应用程序的ID、name和所属队列等。    2. 设置ContainerLaunchContext的本地资源LocalResources。           > 用户通过命令行参数指定ApplicationMaster的Jar包在本地文件系统中的路径，这个路径是用户运行YARN client的机器上的本地文件系统路径。但是YARN client所在机器的本地文件系统对YARN集群是不可见的，为了保证文件对集群可见，我们可以将所需的文件放到HDFS上。        1. 上传am的Jar包至HDFS，并加入到LocalResource中           - LocalResource是Application Master或者Task运行时需要从HDFS下载到本地的资源。在提交APP时，需要上传文件到HDFS，然后指定需要的LocalResource所在HDFS的Path。用一个Map<String, LocalResource>维护本地资源，在往Map里添加资源时，这个文件被NodeManager本地化时会创建一个链接到该文件，这个链接的命名就是key，value就是刚刚创建的LocalResource对象。
+        2.  上传shell script至HDFS。 am运行不需要这个脚本，因此不用加入到ApplicationMaster的localResources中。        3.  上传shell command与shell args至HDFS，并加入到LocalResource中            3. 设置启动ApplicationMaster的环境变量。        am所在的container并不需要用户脚本作为启动信息，所以我们并未将脚本信息加入LocalResource中。但是am所启动container需要这个脚本，所以am需要知道脚本的元数据,所以脚本上传到hdfs后，客户端收集脚本的元数据，并以环境变量的形式传递给am。使用这个环境变量信息，am为最终container创建正确的local resource，然后这个container会执行脚本。        2. 获取客户端的类路径、客户端的YARN环境的类路径，利用这些值构建类路径字符串，添加至环境变量中。    4. 构造启动am的命令行。    5. 使用LocalResources对象、环境变量env和命令行commands实例ContainerLaunchContext类的对象amContainer。    6. 准备好am的启动上下文后，就可以告诉ApplicationSubmissionContext，刚才准备的ContainerLaunchContext是针对am.
+4. 通过YarnClient提交应用程序。   客户端中，提交应用程序的方法会阻塞，直到ResourceManager返回应用程序的状态为ACCEPTED。
+
+
+11.
+向ResourceManager注册自己
+ApplicationMaster周期性向ResourceManager发送心跳信息
+向ResourceManager申请执行任务的Container
+对于每个新分配到的container，ApplicationMaster与对应的节点NodeManager通信，以启动container
+与ResourceManager通讯，了解每一个container的执行情况
+
+12.
+构造函数
+	与客户端类似，创建一个YarnConfiguration对象，读取YARN环境配置
+初始化
+分析args参数以及system.env()
+- args参数：Client构造的用于启动ApplicationMaster的命令行
+- system.env()：
+
+13.
+1. 设置RM、NM消息的异步处理方法    1. 初始化rm回调函数处理器，然后用这个处理器实例一个AMRMClientAsync类的对象amRMClient。 AMRMClientAsync类是YARN所提供的用于ApplicationMaster与ResourceManager异步通信的库。    2. nm回调函数处理器实例化，并创建一个NMClientAsync类的对象nmClientAsync，用于am和nm之间的异步通信。    3. AMRMClientAsync和NMClientAsync类都是AbstractService的子类，所以创建对象后都需要以YarnConfiguration对象为参数进行初始化，然后调用start方法开启服务。2. 向rm注册am。    1. 注册时，需要提供am的hostname、RPC端口和TrackingURL等基本信息。其中TrackingURL可以由开发者自己定义，YARN的Web界面会对每个应用程序显示这个URL的链接。注册成功后，amrm通信的心跳线程就启动了。    2. 注册成功后会返回一个response。        - 通过这个response可以dump out ResourceManager看到的集群资源信息。对container请求的资源进行资源检查，超过可用资源就会报错。        - 通过这个resonanse可以得到ResourceManager之前分配给这个app的container的list，保存在previousAMRunningContainers中。总需求的container数目减之前已经分配给这个app的container数目可以得到当前可以分配的container数（由于硬件错误可能导致ApplicationMaster暂时不可用，因此可能有多次请求，主要是解决这个问题）3. 建立发往ResourceManager的用于请求container的请求，然后以这个请求为参数，调用addContainerRequest()方法将请求发往ResourceManager。！！这里然后呢？？
+
+14.
+RMCallbackHandler类实现了AMRMClientAsync.CallbackHandler接口,当某个事件发生时执行响应的方法。1. onContainersAllocated方法。
+当ApplicationMaster收到ResourceManager分配container的消息（在RM返回的心跳应答中携带）后，执行该方法。2. LaunchContainerRunnable实现了Runnable接口，通过这个类来创建线程并启动线程，新线程中启动分配到的container。3. 类的构造函数需要两个参数，一个是分配到的container，另外一个是监听NodeManager消息的回调函数处理器。4. LaunchContainerRunnable类的run()方法构建最终执行任务的Container的上下文信息，把Container的环境信息，启动命令和本地资源的设置加到ContainerLaunchContext对象中，然后把这个对象提交给Container所在的NodeManager，然后NodeManager就可以启动这个Container了。
+
+15.
+public void run() {    if (!scriptPath.isEmpty()) {        yarnUrl = ConverterUtils.getYarnUrlFromURI(new URI());        LocalResource shellRsrc = LocalResource.newInstance(yarnUrl,                LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,                shellScriptPathLen, shellScriptPathTimestamp);        localResources.put(ExecShellStringPath, shellRsrc);        shellCommand = linux_bash_command;    }    //生成最终需要执行的command    vargs.add(shellCommand);    for (CharSequence str : vargs) {        command.append(str).append(" ");    }    commands.add(command.toString());    //根据命令、环境变量、本地资源等创建Container加载上下文    ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(            localResources, shellEnv, commands, null, allTokens.duplicate(), null);    containerListener.addContainer(container.getId(), container);    //异步启动Container    nmClientAsync.startContainerAsync(container, ctx);}
+
+16.
+NMCallbackHandler回调函数处理NodeManager通知的各种事件
+比较直接，修改ApplicationMaster维护的Container执行完成、失败的个数
+待Container执行完毕后，可以重启发起请求
+失败处理和上面Container执行完毕消息的处理类似
+
+17.
+HBP shell启动HBPApplicationManager#init()
+HBPExecutorServices#create() 判断存储、namespace、RM类型，日志目录
+new YarnHBPExecutorService
+new HBPYarnAppClient “yarnAppClient” 实例YARN Client 并初始化
+getZKClientService()
+executorService#start() YARN客户端、ZKClient、创建节点
+apps.start –name jobscheduler
+Shell#executeLine()
+StartApplicationCommand#execute()
+解析app name，读取配置
+HBPApplicationManager#startApplication()
+通过zk判断app是否在运行
+反射 加载app的mainClass
+executorService#setup()
+new YarnHBPApplicationInitializer
+start()
+yarnAppClient#createLauncher()
+YarnClient#createApplication()
+构建ApplicationSubmissionContext，构建提交器ApplicationSubmitter
+构建submitTask
+构建服务控制器Controller
+Controller#start()
+
