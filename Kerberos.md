@@ -18,18 +18,18 @@ Keytab：以文件的形式呈现，存储了一个或多个Principal的长期�
 - 服务principal的命名类似ftp/station1.example.com@EXAMPLE.COM，形式是服务名／地址（提供者）／realm域；
 
 ## Kerberos用户登录过程：
-a> 用户提供用户名密码；
-b> login程序（/usr/bin/login）把用户名转成princical名称，给KDC发送登录请求；
-c> KDC生成一个用于对称加密的session key，也叫TGT（Ticket-granting Ticket） key。KDC自己留一份，然后复制一份用用户的密码（其实是princical的密码）加密后传给用户（login程序）；
-d> login程序收到之后用刚才用户输入的密码解密，获得了TGT key。
-e> 认证过程完成，之后的通信使用TGT key加密；
+- a> 用户提供用户名密码；
+- b> login程序（/usr/bin/login）把用户名转成princical名称，给KDC发送登录请求；
+- c> KDC生成一个用于对称加密的session key，也叫TGT（Ticket-granting Ticket） key。KDC自己留一份，然后复制一份用用户的密码（其实是princical的密码）加密后传给用户（login程序）；
+- d> login程序收到之后用刚才用户输入的密码解密，获得了TGT key。
+- e> 认证过程完成，之后的通信使用TGT key加密；
 
 ## Kerberos用户获得TGT之后登录服务过程：
-a> 用户向KDC请求服务授权（用户和KDC的沟通是用TGT加密的）；
-b> KDC在验证princical通过后生成一个新的session key。将此key用用户的密码加密一次，再用服务的密码加密一次，把两次加密后的内容都发给用户；
-c> 用户把第一份自己能解开的用TGT解密后得到session key（用于和服务沟通）。然后用此session key加密一个时间戳（作为一个对服务的验证）和自己解不开的那份用服务的密码加密的session key一并发给服务；
-d> 服务用存储在keytab文件中的密码解密，也得到session key（这证明这玩意儿来自拥有自己密码的KDC）。然后解开用户加密的时间戳（这证明用户确实也拿到session key了，意即通过了KDC的允许）。这里面的时间戳用于防止重放攻击，所以所有的机器都必需使用安全的类似NTP的机制把时间同步好；
-e> 登录服务过程完成，整个过程中大家都不知道对方的密码，密码也没有在网络中传输过。之后用户与服务的通信使用session key来加密；
+- a> 用户向KDC请求服务授权（用户和KDC的沟通是用TGT加密的）；
+- b> KDC在验证princical通过后生成一个新的session key。将此key用用户的密码加密一次，再用服务的密码加密一次，把两次加密后的内容都发给用户；
+- c> 用户把第一份自己能解开的用TGT解密后得到session key（用于和服务沟通）。然后用此session key加密一个时间戳（作为一个对服务的验证）和自己解不开的那份用服务的密码加密的session key一并发给服务；
+- d> 服务用存储在keytab文件中的密码解密，也得到session key（这证明这玩意儿来自拥有自己密码的KDC）。然后解开用户加密的时间戳（这证明用户确实也拿到session key了，意即通过了KDC的允许）。这里面的时间戳用于防止重放攻击，所以所有的机器都必需使用安全的类似NTP的机制把时间同步好；
+- e> 登录服务过程完成，整个过程中大家都不知道对方的密码，密码也没有在网络中传输过。之后用户与服务的通信使用session key来加密；
 
 ## 参考资料
 http://www.360doc.com/content/15/0803/10/13047933_489182493.shtml
