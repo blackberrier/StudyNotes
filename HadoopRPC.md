@@ -13,7 +13,7 @@
 
 ### 2. 实现RPC协议
 Hadoop RPC协议通常是一个Java接口，用户需要实现该接口。对IProxyProtocol接口进行简单的实现如下所示：
-<code>
+
     public class MyProxy implements IProxyProtocol {
         public int Add(int number1,int number2) {
             System.out.println("我被调用了!");
@@ -28,12 +28,12 @@ Hadoop RPC协议通常是一个Java接口，用户需要实现该接口。对IPr
             return IProxyProtocol.VERSION;
         }
     }
-</code>
+
 这里实现的Add方法很简单，就是一个加法操作。为了查看效果，这里通过控制台输出一句：“我被调用了！”
 
 ### 3. 构造RPC Server并启动服务
 这里通过RPC的静态方法getServer来获得Server对象，如下代码所示：
-<code>
+
     public class MyServer {
         public static int PORT = 5432;
         public static String IPAddress = "127.0.0.1";
@@ -44,12 +44,12 @@ Hadoop RPC协议通常是一个Java接口，用户需要实现该接口。对IPr
             server.start();
         }
     }
-</code>
+
 这段代码的核心在于第5行的RPC.getServer方法，该方法有四个参数，第一个参数是被调用的java对象，第二个参数是服务器的地址，第三个参数是服务器的端口 。获得服务器对象后，启动服务器。这样，服务器就在指定端口监听客户端的请求。到此为止，服务器就处于监听状态，不停地等待客户端请求到达。
 
 ### 4. 构造RPC Client并发出请求
 这里使用静态方法getProxy或waitForProxy构造客户端代理对象，直接通过代理对象调用远程端的方法，具体如下所示：
-<code>
+
     public class MyClient {
         public static void main(String[] args) {
             InetSocketAddress inetSocketAddress = new InetSocketAddress(
@@ -70,7 +70,7 @@ Hadoop RPC协议通常是一个Java接口，用户需要实现该接口。对IPr
             }
         }
     }
-</code>
+
 以上代码中核心在于RPC.waitForProxy()，该方法有四个参数，第一个参数是被调用的接口类，第二个是客户端版本号，第三个是服务端地址。返回的代理对象，就是服务端对象的代理，内部就是使用java.lang.Proxy实现的。
 
 经过以上四步，我们便利用Hadoop RPC搭建了一个非常高效的客户机–服务器网络模型。
