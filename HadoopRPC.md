@@ -1,12 +1,12 @@
 ## RPC应用实例
 ### 1. 定义RPC协议
 如下所示，我们定义一个IProxyProtocol 通信接口，声明了一个Add()方法。
-<code>
+
     public interface IProxyProtocol extends VersionedProtocol {
         static final long VERSION = 23234L; //版本号，默认情况下，不同版本号的RPC Client和Server之间不能相互通信
         int Add(int number1,int number2);
     }
-</code>
+
 需要注意的是：
 （1）Hadoop中所有自定义RPC接口都需要继承VersionedProtocol接口，它描述了协议的版本信息。
 （2）默认情况下，不同版本号的RPC Client和Server之间不能相互通信，因此客户端和服务端通过版本号标识。
