@@ -6,11 +6,11 @@
 client对kdc说我想访问某个Service，因为client和service之间需要用session-key认证，所以kdc把这个session-key(client<->service之间需要用到的)用kdc<->client之间的密钥加密后发给client。同时发给client的还有用[kdc<->Service之间的密钥加密后的]client的信息和session-key(client<->service之间需要用到的)。客户端收到两个，只有一个他能解密，就是session-key(client<->service之间需要用到的)，用client<->kdc之间共享密钥解密这个session-key，这样客户端就有了可以与Service通信的密钥。客户端用这个session-key将自己的信息进行加密后，连同他收到的来自kdc的他不能解密的包，发送给Service。所以Service一共收到两个东西，一个是用session-key加密的client的信息，另一个是[用kdc<->service之间共享密钥加密的]client的信息和和session-key(client<->service之间需要用到的)，Service将第二包用其与kdc之间的共享密钥进行解密，得到的session-key再来解密第一个包，得到两个client的信息，进行对比后验证client的合法性。
 
 ### 名词解释
-KDC：即Key Distribution Center, 密钥分发中心，负责颁发凭证
-Kinit：Kerberos认证命令，可以使用密码或者Keytab。
-Realm：Kerberos的一个管理域，同一个域中的所有实体共享同一个数据库
-Principal：Kerberos主体，即我们通常所说的Kerberos账号(name@realm) ，可以为某个服务或者某个用户所使用【中文理解为主用户？】
-Keytab：以文件的形式呈现，存储了一个或多个Principal的长期的key，用途和密码类似，用于kerberos认证登录；其存在的意义在于让用户不需要明文的存储密码，和程序交互时不需要人为交互来输入密码。
+1. KDC：即Key Distribution Center, 密钥分发中心，负责颁发凭证
+2. Kinit：Kerberos认证命令，可以使用密码或者Keytab
+3. Realm：Kerberos的一个管理域，同一个域中的所有实体共享同一个数据库
+4. Principal：Kerberos主体，即我们通常所说的Kerberos账号(name@realm) ，可以为某个服务或者某个用户所使用【中文理解为主用户？】
+5. Keytab：以文件的形式呈现，存储了一个或多个Principal的长期的key，用途和密码类似，用于kerberos认证登录；其存在的意义在于让用户不需要明文的存储密码，和程序交互时不需要人为交互来输入密码。
 
 在Kerberos域（realm）中每添加一个服务或者用户就要添加一条principal，每个principal都有一个密码。
 - 用户principal的密码用户自己记住
