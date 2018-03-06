@@ -49,6 +49,10 @@ JAAS是一个Java程序专用的认证和授权框架。
 2. JAAS和用户交互的核心是CallbackHandler，它代表了和用户交互的方式。DialogCallbackHandler就是使用对话框和用户交互，而TextCallbackHandler就是使用标准输入输出和用户交互。
 3. LoginModel和CallbackHandler之间沟通的桥梁是Callback。当 LoginModel 需要从用户获取 username 时，就向 CallbackHandler 发一个 NameCallback， CallbackHandler 和用户交互，获得 username 后再发回去。当 LoginModel 需要密码的时候就向 CallbackHandler 发一个 PasswordCallback，CallbackHandler 和用户交互，获得 password 后再发回去。当 LoginModel 需要给用户发送一些消息时，就向 CallbackHandler 发一个 TextOutputCallback，让 CallbackHandler 将消息显示给用户。以此类推，总之，和用户进行交互的永远是 CallbackHandler。
 
+## Hadoop方式
+两种方式 simple和Kerberos
+1. Simple Auth机制下，Client端提取本地OS login username发送给Server，Server毫无保留地接受username，并以此身份运行Job。实际上，Hadoop本身没有做任何认证。这是不安全的，例如，恶意用户在自己的机器上伪造一个其他人的username(比如hdfs)，然后向JobTracker发送Job，JobTracker将以hdfs身份运行Job，用户Job将拥有一切hdfs所有的权限。
+
 
 
 
