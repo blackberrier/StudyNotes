@@ -52,6 +52,7 @@ JAAS是一个Java程序专用的认证和授权框架。
 ## Hadoop方式
 两种方式 simple和Kerberos
 1. Simple Auth机制下，Client端提取本地OS login username发送给Server，Server毫无保留地接受username，并以此身份运行Job。实际上，Hadoop本身没有做任何认证。这是不安全的，例如，恶意用户在自己的机器上伪造一个其他人的username(比如hdfs)，然后向JobTracker发送Job，JobTracker将以hdfs身份运行Job，用户Job将拥有一切hdfs所有的权限。
+http://qq85609655.iteye.com/blog/2180717
 
 
 
