@@ -179,14 +179,14 @@ hadoop配置core-site.xml中添加
 </property>
 ```
 修改oozie配置文件./conf/oozie-site.xml，根据实际情况修改，另外需要添加hadop的配置文件路径  
-3. 创建libext目录，添加依赖 
+3. 创建libext目录，添加依赖  
 将hadoop目录的share路径下的jar包添加到libext中，另外需要将hadoop lib中与tomcat lib中冲突的jar去掉  
-下载mysq连接器 mysql-connector-java-<版本>.zip放到libext中
-下载ext-2.2.zip，放到libext中  
-4. 将ext2.2.0.zip、hadoop的相关jar包、以及mysql-connector-java-<版本>.jar、htrace-core-<版本>.jar、avro-<版本>.jar打进oozie.war包里
-5. 安装数据库mysql，创建名为oozie的数据库，执行`bin/ooziedb.sh create -sqlfile oozie.sql -run`  
+下载mysq连接器 mysql-connector-java-<版本>.zip放到libext中  
+下载ext-2.2.zip，放到libext中  
+4. 将ext2.2.0.zip、hadoop的相关jar包、以及mysql-connector-java-<版本>.jar、htrace-core-<版本>.jar、avro-<版本>.jar打进oozie.war包里  
+5. 安装数据库mysql，创建名为oozie的数据库，执行`bin/ooziedb.sh create -sqlfile oozie.sql -run`   
 6. 安装oozie-sharelib，将sharelib中的包上传至dhfs，hdfs目标路径需要与oozie-site.xml中的oozie.service.WorkflowAppService.system.libpath的值保持一致  
-7. 启动oozie `bin/oozie-start.sh`
-通过`oozie admin -oozie http://localhost:11000/oozie -status`查看状态
-8. 通过客户端提交
-`oozie job -oozie http://<hostname>:11000/oozie -config ./examples/apps/sqoop/job.properties -run `
+7. 启动oozie `bin/oozie-start.sh`  
+通过`oozie admin -oozie http://localhost:11000/oozie -status`查看状态  
+8. 通过客户端提交  
+`oozie job -oozie http://<hostname>:11000/oozie -config ./examples/apps/sqoop/job.properties -run `  
