@@ -1,19 +1,21 @@
 ## 什么是oozie
-Oozie 是一个工作流调度系统用来管理Hadoop任务  
+Oozie是一个工作流调度系统用来管理Hadoop任务  
+工作流调度：工作流程的编排，调度：安排事件的触发执行(时间触发,事件触发) 
 通俗解释：
-Oozie的作用是，当有一系列Map/Reduce作业，它们之间彼此是相互依赖的关系。正常的思路是写shell脚本来完成这些事情，但是当任务多，依赖关系复杂时，写脚本是费时费力的，而且复用性也差。Oozie应运而生。  
-工作流调度：工作流程的编排，调度：安排事件的触发执行(时间触发,事件触发)  
+Oozie的作用是，当有一系列Map/Reduce作业，它们之间彼此是相互依赖的关系。正常的思路是写shell脚本来完成这些事情，但是当任务多，依赖关系复杂时，写脚本是费时费力的，而且复用性也差——Oozie应运而生。  
 1. Cloudeara共享给Apache的开源项目，提供对hadoop任务（MapReduce、Spark、Pig、Hive等）的调度。  
 2. oozie需要部署到tomcat或其他servlet容器中，提供对外的接口；需要使用关系型数据库**存储调度信息**。  
 3. 通过xml格式的文件定义工作流。可以有不同的功能节点，比如分支、合并和汇合等。  
 4. oozie定义了控制流程节点和动作节点：**控制节点**定义了流程的开始和结束，还提供了控制工作流执行路径的机制（decision，fork，join等）；**动作节点**能够触发一个计算任务（Computation Task）或者处理任务（Processing Task）执行的节点。  
 
-## oozie的各个版本
+## oozie的层次
 Oozie v1 is a server based **Workflow Engine** specialized in running workflow jobs with actions that execute Hadoop Map/Reduce and Pig jobs.
 ![v1](https://i.imgur.com/OXo6Lby.png)  
-Oozie v2 is a server based **Coordinator Engine** specialized in running workflows based on time and data triggers(时间触发 数据触发). It can continuously run workflows based on time (e.g. run it every hour), and data availability (e.g. wait for my input data to exist before running my workflow).
+Oozie v2 is a server based **Coordinator Engine** specialized in running workflows based on time and data triggers(时间触发 数据触发). It can continuously run workflows based on time (e.g. run it every hour), and data availability (e.g. wait for my input data to exist before running my workflow).  
+Coordinator：oozie支持非常完善的定时调度功能，类似于linux系统的crontab  
 ![v2](https://i.imgur.com/Ot6FwIQ.png)  
-Oozie v3 is a server based **Bundle Engine** that provides a higher-level oozie abstraction that will batch a set of coordinator applications. The user will be able to start/stop/suspend/resume/rerun a set coordinator jobs in the bundle level resulting a better and easy operational control.
+Oozie v3 is a server based **Bundle Engine** that provides a higher-level oozie abstraction that will batch a set of coordinator applications. The user will be able to start/stop/suspend/resume/rerun a set coordinator jobs in the bundle level resulting a better and easy operational control.  
+Bundle：将一系列coordinator应用以bundle为单位进行捆绑，比如按照业务，部门等进行分类，将各自的coordinator任务捆绑在一起运行，有利于更好的控制流程   
 ![v3](https://i.imgur.com/fariJ0F.png)  
 ## 整体框架
 ![struct](https://i.imgur.com/KdSyKss.png)  
@@ -162,12 +164,13 @@ Oozie可以通过两种方式来探测工作流Job的执行情况：一种是基
 ● yarn-cluster mode: the driver and executor run in Yarn.  
 
 ## oozie环境配置与使用
-### 安装
 1. 安装包  
 可以在官网上获取oozie的源码并自行编译，也可以使用cloudera编译好的版本。  
 自行编译时候需要注意需要修改源码的pom中关于jdk版本、hadoop版本等的配置项。  
+编译完成后，包在build目录下的oozie-4.3.0-distro.tar.gz文件。  
 2. 修改hadoop和oozie的配置文件
-hadoop配置core-site.xml中添加  
+oozie启用了代理机制，整合hadoop需要指定主机名和用户名。  
+hadoop配置core-site.xml中添加  
 ```
 <property>
   <name>hadoop.proxyuser.root.hosts</name>
@@ -181,11 +184,16 @@ hadoop配置core-site.xml中添加
 修改oozie配置文件./conf/oozie-site.xml，根据实际情况修改，另外需要添加hadop的配置文件路径  
 3. 创建libext目录，添加依赖  
 将hadoop目录的share路径下的jar包添加到libext中，另外需要将hadoop lib中与tomcat lib中冲突的jar去掉  
-下载mysq连接器 mysql-connector-java-<版本>.zip放到libext中  
+下载mysql连接器 mysql-connector-java-<版本>.zip放到libext中  
 下载ext-2.2.zip，放到libext中  
 4. 将ext2.2.0.zip、hadoop的相关jar包、以及mysql-connector-java-<版本>.jar、htrace-core-<版本>.jar、avro-<版本>.jar打进oozie.war包里  
-5. 安装数据库mysql，创建名为oozie的数据库，执行`bin/ooziedb.sh create -sqlfile oozie.sql -run`   
-6. 安装oozie-sharelib，将sharelib中的包上传至dhfs，hdfs目标路径需要与oozie-site.xml中的oozie.service.WorkflowAppService.system.libpath的值保持一致  
+5. 安装数据库mysql，创建名为oozie的数据库  
+```
+createuser'oozie'identifiedby'oozie';
+createdatabaseoozie；
+grantallonoozie.*to'oozie'@'%'identifiedby'oozie';
+```
+6. 安装oozie-sharelib，将sharelib中的包上传至dhfs，hdfs目标路径需要与oozie-site.xml中的oozie.service.WorkflowAppService.system.libpath的值保持一致  
 7. 启动oozie `bin/oozie-start.sh`  
 通过`oozie admin -oozie http://localhost:11000/oozie -status`查看状态  
 8. 通过客户端提交  
