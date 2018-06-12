@@ -4,7 +4,7 @@ ListenableFuture是可以监听的Future，它是对java原生Future的扩展增
 Future表示一个异步计算任务，当任务完成时可以得到计算结果。如果我们希望一旦计算完成就拿到结果展示给用户或者做另外的计算，就必须使用另一个线程不断的查询计算状态。这样代码复杂而且效率低下。  
 使用ListenableFuture Guava帮我们检测Future是否完成了，如果完成就自动调用回调函数，这样可以减少并发程序的复杂度。
 ListenableFuture是一个接口，它从jdk的Future接口继承，添加了void addListener(Runnable listener, Executor executor)方法。  
-###使用
+### 使用
 1. 定义ListenableFuture的实例
 首先通过MoreExecutors类的静态方法listeningDecorator方法初始化一个ListeningExecutorService的方法，然后使用此实例的submit方法即可初始化ListenableFuture对象。
   ```
