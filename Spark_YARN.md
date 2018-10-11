@@ -37,7 +37,8 @@ YARN应用程序的客户端部分
     (5) 启动ListenerBus，并post环境信息和应用信息，添加确保context停止的hook。  
     
             
-2. ResourceManager收到请求后，在集群中选择一个Nodemanager，为这个应用程序分配一个container，在这个container中启动ApplicationMaster。在ApplicationMaster中执行ExecutorLauncher类的main方法。
+2. ResourceManager收到请求后，在集群中选择一个Nodemanager，为这个应用程序分配一个container，在这个container中启动ApplicationMaster。在ApplicationMaster中执行ExecutorLauncher类的main方法。  
+    `71253 org.apache.spark.deploy.yarn.ExecutorLauncher --arg 192.168.99.1:50188 --properties-file /tmp/hadoop-jacek/nm-local-dir/usercache/jacek/appcache/.../__spark_conf__/__spark_conf__.properties`
     - 在registerAM方法中，获取应用程序编号，获取DriverEndpoint引用地址，通过YarnRMClient的客户端，ResourceManager向终端点DriverEndpoint发送消息通知ApplicationMaster启动完毕
     - 通过YarnAllocator的allocateResource方法申请executor资源  
         - 在allocateResource方法中，通过AMRMClient的allocate方法申请container执行executor
