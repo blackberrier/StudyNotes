@@ -19,34 +19,33 @@ YARN应用程序的客户端部分
     (3) 在submit()方法中，  
         第一步准备启动环境：调用prepareSubmitEnvironment()方法，将参数解析为执行类主函数所需的参数（待count的文件路径）、classpath（指定的jar包，spark-examples_2.11-2.1.0-hbp2.0.0.jar）、系统参数（spark.jars=spark-examples_2.11-2.1.0-hbp2.0.0.jar）和需要运行的类（org.apache.spark.examples.JavaWordCount），返回一个4元元组。  
         第二步执行用户提交的应用程序。MutableURLClassLoader,加载执行类，反射执行main方法。  
-    (4) SparkContext初始化，提交的spark应用程序代码的第一步一般是构造sparksession初始化或者sparkcontext初始化。  
-     Spark 2.0引入了一个新的切入点SparkSession，SparkSession内部封装了sparkContext。
-    SparkContext初始化时，创建Spark执行环境SparkEnv，Hadoop配置及Executor环境变量的设置，创建TaskScheduler、SchedulerBackend和DAGScheduler，启动TaskScheduler，创建和启动Executor分配管理器ExecutorAllocationManager。启动ListenerBus，并post环境信息和应用信息，添加确保context停止的hook。  
-    (5) 调用TaskSchedulerImpl的start方法实现TaskScheduler的启动(Yarnscheduler继承TaskschedulerImpl，TaskschedulerImpl实现TaskScheduler)。  
+    (4) 提交的spark应用程序代码的开始一般是构造sparksession初始化或者sparkcontext初始化。  
+    Spark 2.0引入了一个新的切入点SparkSession，SparkSession内部封装了sparkContext。  
+    SparkContext初始化时，创建Spark执行环境SparkEnv(RPCEnv等)，创建TaskScheduler、SchedulerBackend和DAGScheduler。  
+    启动TaskScheduler：调用TaskSchedulerImpl的start方法实现(TaskschedulerImpl实现TaskScheduler)。  
     - 启动YarnClientSchedulerBackend；  
         - 构造Client；  
         - 调用Client的submitApplication方法提交应用  
-            - 连接LauncherBackend  
+            - 连接LauncherBackend
             - 创建YarnClient，用于与YARN集群交互
             - 向ResourceManager申请应用程序编号
-            - 确认Yarn集群中是否有足够的资源启动ApplicationMaster
-            - 构造ContainerLaunchContext，用于启动applicationmaster的container，包括启动环境，java选项，启动命令：启动amClass是org.apache.spark.deploy.yarn.ExecutorLauncher
+            - 构造ContainerLaunchContext，用于启动ApplicationMaster的container，包括启动环境，java选项，启动命令：启动amClass是org.apache.spark.deploy.yarn.ExecutorLauncher
             - 通过containerContext构造submissionContext：主要是设置app名称，队列，类型和资源大小等
             - 调用YarnClient的submitApplication方法提交应用，参数是submissionContext
         - 等待应用状态为running状态
         - 调用YarnClientSchedulerBackend的父类CoarseGrainedSchedulerBackend的start方法，启动driverEndpoint
+    (5) 启动ListenerBus，并post环境信息和应用信息，添加确保context停止的hook。  
+    
             
-2. ResourceManager收到请求后，在集群中选择一个Nodemanager，为这个应用程序分配一个container，在这个container中启动ApplicationMaster。
-
-3. 启动Am后，执行ExecutorLauncher类的main方法。
+2. ResourceManager收到请求后，在集群中选择一个Nodemanager，为这个应用程序分配一个container，在这个container中启动ApplicationMaster。在ApplicationMaster中执行ExecutorLauncher类的main方法。
     - 在registerAM方法中，获取应用程序编号，获取DriverEndpoint引用地址，通过YarnRMClient的客户端，ResourceManager向终端点DriverEndpoint发送消息通知ApplicationMaster启动完毕
     - 通过YarnAllocator的allocateResource方法申请executor资源  
         - 在allocateResource方法中，通过AMRMClient的allocate方法申请container执行executor
         - 申请到container后，在runAllocatedContainers方法中，调用ExecutorRunnable的run方法，构造NMClient启动container。在container中启动CoarseGrainedExecutorBackend，启动后，会向客户端中的SparkContext注册并申请任务集
         
-4. SparkContext分配任务集给CoarseGrainedExecutorBackend并追踪运行状态。  
+3. SparkContext分配任务集给CoarseGrainedExecutorBackend并追踪运行状态。  
 
-5. 应用程序运行完成后，SparkContext向ResourceManager申请注销并关闭。
+4. 应用程序运行完成后，SparkContext向ResourceManager申请注销并关闭。
 
 
 ## YARN-Cluster模式  
