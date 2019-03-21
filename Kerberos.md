@@ -2,7 +2,7 @@
 ## Kerberos
 
 ### 过程
-角色：client kdc Service
+角色：client kdc Service  
 client对kdc说我想访问某个Service，因为client和service之间需要用session-key认证，所以kdc把这个session-key(client<->service之间需要用到的)用kdc<->client之间的密钥加密后发给client。同时发给client的还有用[kdc<->Service之间的密钥加密后的]client的信息和session-key(client<->service之间需要用到的)。客户端收到两个，只有一个他能解密，就是session-key(client<->service之间需要用到的)，用client<->kdc之间共享密钥解密这个session-key，这样客户端就有了可以与Service通信的密钥。客户端用这个session-key将自己的信息进行加密后，连同他收到的来自kdc的他不能解密的包，发送给Service。所以Service一共收到两个东西，一个是用session-key加密的client的信息，另一个是[用kdc<->service之间共享密钥加密的]client的信息和和session-key(client<->service之间需要用到的)，Service将第二包用其与kdc之间的共享密钥进行解密，得到的session-key再来解密第一个包，得到两个client的信息，进行对比后验证client的合法性。
 
 ### 名词解释
