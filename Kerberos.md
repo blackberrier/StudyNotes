@@ -12,7 +12,7 @@ client对kdc说我想访问某个Service，因为client和service之间需要用
 4. Principal：Kerberos主体，即我们通常所说的Kerberos账号(name@realm) ，可以为某个服务或者某个用户所使用【中文理解为主用户？】
 5. Keytab：以文件的形式呈现，存储了一个或多个Principal的长期的key，用途和密码类似，用于kerberos认证登录；其存在的意义在于让用户不需要明文的存储密码，和程序交互时不需要人为交互来输入密码。
 
-Principal是一种身份的ID，在这种身份上可以唯一地标识一个user。例如，同一个person，他可能有不同的身份，公民，学生，读者等。那么他的公民ID，学生ID以及读者ID都分别是一种Principal。不同的认证机制可以定义不同的Principal来标识user。
+Principal是一种身份的ID，在这种身份上可以唯一地标识一个user。例如，同一个person，他可能有不同的身份，公民，学生，读者等。那么他的公民ID，学生ID以及读者ID都分别是一种Principal。不同的认证机制可以定义不同的Principal来标识user。  
 Subject是一个container，包含一组关于某个user的安全相关信息。Subject最主要的内容是Principals和Credentials，Principals比如上面提到的公民ID，学生ID。Subject可以在不同的认证机制中传递，每个认证机制都可以将自己定义的Principal加入该Subject。而Credential是对Principal的补充
 
 在Kerberos域（realm）中每添加一个服务或者用户就要添加一条principal，每个principal都有一个密码。
