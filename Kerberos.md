@@ -61,3 +61,52 @@ http://qq85609655.iteye.com/blog/2180717
 http://www.360doc.com/content/15/0803/10/13047933_489182493.shtml
 https://www.cnblogs.com/luxianghao/p/5269739.html
 http://blog.csdn.net/wulantian/article/details/42418231
+
+
+
+信息加密传输是保证网络安全的基本手段，不管是对称加密还是非对称加密，都需要在通信的两端维护密钥。 如果密钥一直不变的话，根据大量截获的加密消息，迟早可能将密钥破解出来；而如果密钥定时更新的话，总可以通过减小密钥更新时间，来保证密钥破解之前更新掉。
+用定时更新的短期密钥来加密消息，就是Kerberos方案的出发点。下面详细介绍Kerberos协议涉及的概念和交互消息。
+## 1. 基本概念  
+长期密钥：Long-term Key，Kerberos协议中称作主密钥(Master Key，简写为MK)  
+短期密钥：Short-term Key，Kerberos协议中称作会话密钥(Session Key，简写为SK)  
+票据：Ticket，可以认为是加密过的会话密钥，包括TGT(Ticket Granting Ticket)和SST(Service Session Ticket)，分别用来访问票据授予服务(Ticket Granting Service)和具体业务服务(Service)  
+主体：Principal，使用Kerberos协议进行认证的主体，比如，配置了Kerberos认证的hdfs客户端、NameNode和DataNode都是Kerberos协议的Principal
+Kerberos服务  
+kadmind：管理KDB数据库中Principal，KDB存储着TGS和所有Principal的Master Key  
+kdc：会话密钥的分发中心(Key Distributing Center)，包括认证(AS, Authentication Service)和票据授予(TGS, Ticket Granting Service)两种服务  
+AS: 对请求发起端的身份进行认证，生成用于发起端和TGS的会话密钥，返回加密的会话密钥和票据TGT  
+TGS: 验证请求发起端的TGT，并生成用于发起端和业务服务端的会话密钥，返回加密的会话密钥和票据SST  
+## 2. 协议分析  
+A P_a B P_b ts: 主体A、主体A的信息、主体B、主体B的信息、时间戳timestamp  
+MK_a MK_b MK_k: 分别表示主体A、主体B和KDC的主密钥(Master Key)  
+SK_ak SK_ab: 分别表示主体A与KDC之间的会话密钥、主体A与主体B之间的会话密钥  
+TGT_ak: 主体A用来访问KDC TGS服务用的票据，可理解为用KDC主密钥MK_k加密的会话秘密SK_ak  
+SST_ab: 主体A用来访问主体B服务用的票据，可理解为用主体B的主密钥MK_b加密的会话秘密SK_ab  
+
+前述，使用会话密钥加密消息是Kerberos协议的出发点，接下来的问题就是如何传输会话密钥？答案是，用主密钥对会话密钥进行加密传输。下面根据 Kerberos协议的时序图，介绍一下协议过程中的交互的消息。  
+### 2.1 KDC认证  
+s1. 请求发起端A将主体信息(P_a)和用MK_a加密的认证信息(时间戳ts)，发给KDC的AS服务。  
+s2. AS会从KDB中获取P_a的主密钥MK_a，解密出时间戳，校验时间戳是否合法，且时间偏差是否超出阈值(默认10分钟)  
+若校验通过，AS向TGS申请P_a访问TGS的会话密钥SK_ak，并将SK_ak分别用MK_a和MK_k加密(MK_k加密的SK_ak就是票据TGT_ak)，返回A  
+若校验不过，则返回异常  
+因为Kerberos认证过程中需要校验时间戳，所以参与认证的各个主体和Kerberos服务器节点要进行时钟对其。  
+### 2.2 请求业务票据  
+s3. A收到MK_a(SK_ak)和TGT_ak后，解密出SK_ak来加密ts,P_a,P_b，与TGT_ak一起发给KDC的TGS  
+s4. TGS主密钥MK_k从TGT_ak中解密出SK_ak，再用SK_ak解密出ts,P_a,P_b并校验时间戳ts和P_a  
+若校验通过，TGS生成主体A和主体B的会话密钥SK_ab，并从KDB中获取MK_a和MK_b分别加密SK_ab(MK_b加密的SK_ab就是票据SST_ab)，返回给A  
+若校验不过，则返回异常  
+相比AS仅校验时间戳ts，TGS会同时检验时间戳ts和请求发起端的主体信息P_a。另外，步骤s4中TGS没有将加密的SK_ab分别发送给主体A和主体B，而是全都发给了A；主要是为避免网络延时异常，例如，A用SK_ab加密的请求发送到B时，由于传输延时，B可能还没收到TGS发送的SK_ab；该协议的处理方法就是会话密钥一开始都是由发起端持有，步骤s2 AS将TGT_ak发给P_a也是同样的思路。  
+### 2.3 执行业务请求  
+s5. A收到MK_a(SK_ab)和SST_ab后，解密出SK_ak来加密ts,P_a,REQ，与SST_ab一起发给B  
+s6. B主密钥MK_b从SST_ab中解密出SK_ab，再用SK_ab解密ts,P_a,REQ，并校验时间戳ts和P_a  
+若校验通过，则B处理业务请求REQ，并将响应RSP用SK_ab加密后返回给A  
+若校验不过，则返回异常  
+Kerberos协议步骤分析完之后，可以看到会话密钥和票据都是由主密钥加密的，那么，主密钥怎么传输呢？Kerberos如何安全将主密钥分发给各自对应的主体呢？实际上，Kerberos不处理主密钥传输的问题，这个需要使用者(管理员)来保证主密钥安全地传输和部署。管理员可以从KDB中将一个和多个主体的主密钥及相关信息导出为固定的格式，通常命名为keytab。  
+Kerberos协议有时被称为三方认证协议，其时也可认为是通过第三方来认证。  
+通常情况下，主体A请求主体B的服务时，只要A向B发送认证信息，认证过了的话，即可响应A的请求，否则拒绝。  
+Kerberos协议中，如果主体A要请求主体B的服务，A不是向B认证，而向KDC发送认证信息，A在KDC那里认证过了的话，会获得一个访问B的票据SST_ab，A向B请求服务时附带这个票据，即B验证这个票据后，即可响应请求。  
+## 3. 总结  
+Kerberos协议的基本思路：  
+短期密钥(Session Key)加密传输业务数据  
+长期密钥(Master Key)加密传输短期密钥  
+
