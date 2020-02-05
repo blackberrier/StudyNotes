@@ -10,7 +10,7 @@
 
 ## 上古时期
 前端写好html静态页面，丢给后端，后端在servlet中调用service拿到数据，根据情况将数据和html页面拼接，然后输出到前端。
-!(https://pic2.zhimg.com/v2-fc8bb977784e7b703bfd157192825899_r.jpg)
+!(https://pic2.zhimg.com/v2-fc8bb977784e7b703bfd157192825899_r.jpg?raw=true)
 主要目的:在最终输出的html的代码中嵌入后台数据
 两种思路：把html语句拿出来在Servlet里拼接好再输出（前述方式）
         直接在html语句中写入动态数据（不是HTML文件，必须是JSP之类的动态模板文件中的HTML语句）
@@ -32,4 +32,4 @@ JSP请求---->web服务器---->JSP引擎---->Servlet引擎---->Web服务器---->
 7. 最终Web浏览器处理HTTP Response中动态产生的HTML内容
 
 一个http请求
-!(https://pic2.zhimg.com/80/v2-e8748e765b5613d223cd995d5bf9d1a1_hd.jpg)
+!(https://pic2.zhimg.com/80/v2-e8748e765b5613d223cd995d5bf9d1a1_hd.jpg?raw=true)
